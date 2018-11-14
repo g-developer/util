@@ -13,7 +13,7 @@ type Any interface{}
 type HttpResp struct {
 	Url string `json:"url"`
 	Method string `json:"method"`
-	Params *map[string]Any `json:"params, omitempty"`
+	Params Any `json:"params, omitempty"`
 	HttpCode int `json:"httpCode"`
 	HttpError string `json:"httpError, omitempty"`
 	Raw string `json:"raw, omitempty"`
@@ -90,26 +90,35 @@ func HttpGet (strUrl string, params map[string]Any, headers map[string]string, c
 }
 
 
-func HttpPost (strUrl string, params map[string]Any, headers map[string]string, cookies map[string]string) *HttpResp {
+func HttpPost (strUrl string, p Any, headers map[string]string, cookies map[string]string) *HttpResp {
 	client := &http.Client{}
 	ret := &HttpResp{}
 	httpParams := url.Values{}
-	for k, v := range params {
-		switch realValue := v.(type) {
-		case string:
-			httpParams.Set(k, realValue)
-		case int:
-			httpParams.Set(k, strconv.Itoa(realValue))
-		case []byte:
-			httpParams.Set(k, string(realValue))
-		case byte:
-			httpParams.Set(k, string(realValue))
+	var request *http.Request
+	var err error
+	if params, ok := p.(map[string]Any) ; ok {
+		for k, v := range params {
+			switch realValue := v.(type) {
+			case string:
+				httpParams.Set(k, realValue)
+			case int:
+				httpParams.Set(k, strconv.Itoa(realValue))
+			case []byte:
+				httpParams.Set(k, string(realValue))
+			case byte:
+				httpParams.Set(k, string(realValue))
+			}
+		}
+		request, err = http.NewRequest("POST", strUrl, strings.NewReader(httpParams.Encode()))
+	} else {
+		if strParam, ok := p.(string) ; ok {
+			request, err = http.NewRequest("POST", strUrl, strings.NewReader(strParam))
+		} else {
+			if byteParam, ok := p.([]byte) ; ok {
+				request, err = http.NewRequest("POST", strUrl, strings.NewReader(string(byteParam)))
+			}
 		}
 	}
-	if len(httpParams) > 0 {
-		strUrl += "?" + httpParams.Encode()
-	}
-	request, err := http.NewRequest("Post", strUrl, strings.NewReader(httpParams.Encode()))
 	if err != nil {
 		ret.HttpError = err.Error()
 		return ret
@@ -130,7 +139,7 @@ func HttpPost (strUrl string, params map[string]Any, headers map[string]string, 
 		}
 	}
 	request.Header.Add("Cookie", strCookie)
-	ret.Params = &params
+	ret.Params = &p
 	ret.ReqHeaders = &request.Header
 	ret.ReqCookies = &cookies
 	response, err := client.Do(request)
