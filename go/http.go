@@ -2,8 +2,8 @@ package util
 
 import (
 	"io/ioutil"
-	"net/url"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -11,23 +11,26 @@ import (
 type Any interface{}
 
 type HttpResp struct {
-	Url string `json:"url"`
-	Method string `json:"method"`
-	Params Any `json:"params, omitempty"`
-	HttpCode int `json:"httpCode"`
-	HttpError string `json:"httpError, omitempty"`
-	Raw string `json:"raw, omitempty"`
-	ReqHeaders *http.Header `json:"reqHeaders, omitempty"`
-	ReqCookies *map[string]string `json:"reqHookies, omitempty"`
-	RespCookies []*http.Cookie `json:"respCookies, omitempty"`
+	Url         string             `json:"url"`
+	Method      string             `json:"method"`
+	Params      Any                `json:"params, omitempty"`
+	HttpCode    int                `json:"httpCode"`
+	HttpError   string             `json:"httpError, omitempty"`
+	Raw         string             `json:"raw, omitempty"`
+	ReqHeaders  *http.Header       `json:"reqHeaders, omitempty"`
+	ReqCookies  *map[string]string `json:"reqHookies, omitempty"`
+	RespCookies []*http.Cookie     `json:"respCookies, omitempty"`
 }
 
-func HttpGet (strUrl string, params map[string]Any, headers map[string]string, cookies map[string]string) *HttpResp {
+func HttpGet(strUrl string, p Any, headers map[string]string, cookies map[string]string) *HttpResp {
 	client := &http.Client{}
 	ret := &HttpResp{}
-    httpParams := url.Values{}
-	for k, v := range params {
-		switch realValue := v.(type) {
+	var request *http.Request
+	var err error
+	httpParams := url.Values{}
+	if params, ok := p.(map[string]Any); ok {
+		for k, v := range params {
+			switch realValue := v.(type) {
 			case string:
 				httpParams.Set(k, realValue)
 			case int:
@@ -36,24 +39,32 @@ func HttpGet (strUrl string, params map[string]Any, headers map[string]string, c
 				httpParams.Set(k, string(realValue))
 			case byte:
 				httpParams.Set(k, string(realValue))
+			}
+		}
+		if len(httpParams) > 0 {
+			strUrl += "?" + httpParams.Encode()
+		}
+		request, err = http.NewRequest("GET", strUrl, nil)
+	} else {
+		if strParam, ok := p.(string); ok {
+			request, err = http.NewRequest("GET", strUrl, strings.NewReader(strParam))
+		} else {
+			if byteParam, ok := p.([]byte); ok {
+				request, err = http.NewRequest("GET", strUrl, strings.NewReader(string(byteParam)))
+			}
 		}
 	}
-	//request, err := http.NewRequest("Post", strUrl, strings.NewReader(httpParams.Encode()))
-	if len(httpParams) > 0 {
-		strUrl += "?" + httpParams.Encode()
-	}
-	request, err := http.NewRequest("GET", strUrl, nil)
 	if err != nil {
 		ret.HttpError = err.Error()
 		return ret
 	}
 	if nil != headers {
 		for k, v := range headers {
-			request.Header.Add(k, v)	
-		}	
+			request.Header.Add(k, v)
+		}
 	}
 	if 0 >= len(request.Header.Get("User-Agent")) {
-		request.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")	
+		request.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")
 	}
 
 	strCookie := ""
@@ -86,17 +97,15 @@ func HttpGet (strUrl string, params map[string]Any, headers map[string]string, c
 		}
 	}
 
-
 }
 
-
-func HttpPost (strUrl string, p Any, headers map[string]string, cookies map[string]string) *HttpResp {
+func HttpPost(strUrl string, p Any, headers map[string]string, cookies map[string]string) *HttpResp {
 	client := &http.Client{}
 	ret := &HttpResp{}
 	httpParams := url.Values{}
 	var request *http.Request
 	var err error
-	if params, ok := p.(map[string]Any) ; ok {
+	if params, ok := p.(map[string]Any); ok {
 		for k, v := range params {
 			switch realValue := v.(type) {
 			case string:
@@ -111,10 +120,10 @@ func HttpPost (strUrl string, p Any, headers map[string]string, cookies map[stri
 		}
 		request, err = http.NewRequest("POST", strUrl, strings.NewReader(httpParams.Encode()))
 	} else {
-		if strParam, ok := p.(string) ; ok {
+		if strParam, ok := p.(string); ok {
 			request, err = http.NewRequest("POST", strUrl, strings.NewReader(strParam))
 		} else {
-			if byteParam, ok := p.([]byte) ; ok {
+			if byteParam, ok := p.([]byte); ok {
 				request, err = http.NewRequest("POST", strUrl, strings.NewReader(string(byteParam)))
 			}
 		}
@@ -161,6 +170,5 @@ func HttpPost (strUrl string, p Any, headers map[string]string, cookies map[stri
 			return ret
 		}
 	}
-
 
 }
