@@ -74,7 +74,7 @@ func HttpGet(strUrl string, p Any, headers map[string]string, cookies map[string
 		}
 	}
 	request.Header.Add("Cookie", strCookie)
-	ret.Params = &params
+	ret.Params = &p
 	ret.ReqHeaders = &request.Header
 	ret.ReqCookies = &cookies
 	response, err := client.Do(request)
