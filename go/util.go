@@ -2,7 +2,7 @@ package util
 
 import (
 	"net"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 func GetLocalIp () (string, error) {

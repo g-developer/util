@@ -51,12 +51,20 @@ func HttpGet(strUrl string, p Any, headers map[string]string, cookies map[string
 		} else {
 			if byteParam, ok := p.([]byte); ok {
 				request, err = http.NewRequest("GET", strUrl, strings.NewReader(string(byteParam)))
+			} else {
+				if nil == p {
+					request, err = http.NewRequest("GET", strUrl, nil)
+				}
 			}
 		}
+
 	}
 	if err != nil {
 		ret.HttpError = err.Error()
 		return ret
+	}
+	if nil == request.Header {
+		request.Header = http.Header{}
 	}
 	if nil != headers {
 		for k, v := range headers {
@@ -125,12 +133,19 @@ func HttpPost(strUrl string, p Any, headers map[string]string, cookies map[strin
 		} else {
 			if byteParam, ok := p.([]byte); ok {
 				request, err = http.NewRequest("POST", strUrl, strings.NewReader(string(byteParam)))
+			} else {
+				if nil == p {
+					request, err = http.NewRequest("POST", strUrl, nil)
+				}
 			}
 		}
 	}
 	if err != nil {
 		ret.HttpError = err.Error()
 		return ret
+	}
+	if nil == request.Header {
+		request.Header = http.Header{}
 	}
 	if nil != headers {
 		for k, v := range headers {
@@ -158,7 +173,7 @@ func HttpPost(strUrl string, p Any, headers map[string]string, cookies map[strin
 	} else {
 		ret.HttpCode = response.StatusCode
 		ret.Url = strUrl
-		ret.Method = "GET"
+		ret.Method = "POST"
 		ret.RespCookies = response.Cookies()
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
